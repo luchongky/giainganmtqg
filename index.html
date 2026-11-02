@@ -253,12 +253,11 @@ function render(){
     + tabBtn('ctda','Chương trình') + tabBtn('diaban','Địa bàn') + tabBtn('donvi','Đơn vị thực hiện') + tabBtn('loai','Lĩnh vực chi')
     + '</div><div class="legend"><span><i class="dot dt"></i>Đầu tư</span><span><i class="dot sn"></i>Sự nghiệp</span></div></div>'
     + '<div class="tools"><input type="search" id="q" placeholder="Tìm theo tên (gõ không dấu được)" value="'+esc(S.q)+'">'
-    + '<button id="btnCsv">Tải bảng (CSV)</button></div>'
+    + '</div>'
     + '<div class="rows" id="rows"></div><div class="more" id="more"></div></section>';
   $('app').innerHTML = h;
   document.querySelectorAll('.tabs button').forEach(function(b){ b.onclick = function(){ S.tab=b.dataset.t; S.limit=15; render(); }; });
   $('q').oninput = function(){ S.q = this.value; S.limit = 15; renderRows(); };
-  $('btnCsv').onclick = exportCsv;
   bindTrend();
   renderRows();
 }
@@ -341,22 +340,6 @@ function tip(ev, title, rows){
 }
 function hideTip(){ $('tip').style.opacity = 0; }
 document.addEventListener('touchstart', function(e){ if(!e.target.closest('.tcol,.bar')) hideTip(); }, {passive:true});
-
-/* ---- xuất CSV ---- */
-function exportCsv(){
-  var list = currentList(), d = S.data;
-  var head = ['STT','Tên','Mã','Đầu tư (đồng)','Sự nghiệp (đồng)','Tổng (đồng)','Chi tiết'];
-  var lines = [head];
-  list.forEach(function(x,i){
-    lines.push([i+1, x.name, x.code||'', x.dt, x.sn, x.total, '']);
-    (x.children||[]).forEach(function(c){ lines.push(['', '', c.code||'', c.dt, c.sn, c.total, c.name]); });
-  });
-  var csv = '﻿' + lines.map(function(r){ return r.map(function(v){ v=String(v); return /[",\n;]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }).join(','); }).join('\n');
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  a.download = 'MTQG_'+S.tab+'_'+d.nam+'_'+periodName(d.thang).replace(/\s/g,'')+'.csv';
-  a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
-}
 
 init();
 </script>

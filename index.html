@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giải ngân MTQG Cao Bằng</title>
+<meta name="description" content="Thống kê tình hình thực hiện, giải ngân các Chương trình mục tiêu quốc gia tỉnh Cao Bằng">
+<meta name="author" content="Lục Hồng Kỳ">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ====== CẤU HÌNH MÀU ====== */
+:root{
+  color-scheme: light;
+  --bg:#f4f5f2; --surface:#fcfcfb; --surface-2:#eef0ec; --line:#dfe1dc;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#7a7974;
+  --accent:#1c5cab; --sn:#2a78d6; --dt:#eb6834;
+  --bad:#c0392b; --shadow:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --line:#33332f;
+    --text:#f0efec; --text-2:#c3c2b7; --muted:#8e8d86;
+    --accent:#86b6ef; --sn:#3987e5; --dt:#d95926; --bad:#e66767; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --line:#33332f;
+  --text:#f0efec; --text-2:#c3c2b7; --muted:#8e8d86;
+  --accent:#86b6ef; --sn:#3987e5; --dt:#d95926; --bad:#e66767; --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.5 "Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:16px}
+header.top{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin:8px 0 16px}
+.org{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2);font-weight:600}
+h1{font-size:24px;line-height:1.25;margin:2px 0 4px;font-weight:700}
+.sub{color:var(--text-2);font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,input[type=search],button{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px}
+button{cursor:pointer}
+button:hover,select:hover{border-color:var(--muted)}
+.btn-ghost{background:transparent}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .lb{font-size:13px;color:var(--text-2);display:flex;align-items:center;gap:6px}
+.kpi .v{font-size:26px;font-weight:700;letter-spacing:-.01em;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .u{font-size:12px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}
+.dot.sn{background:var(--sn)} .dot.dt{background:var(--dt)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);margin-bottom:16px}
+.card h2{font-size:16px;margin:0;font-weight:600}
+.card .hd{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--text-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+/* Biểu đồ cột theo tháng */
+.trend{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;align-items:end;height:200px;padding-top:8px;border-bottom:1px solid var(--line)}
+.tcol{height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;position:relative;cursor:default}
+.tcol .seg{width:100%;max-width:44px;margin:0 auto}
+.tcol .seg.sn{background:var(--sn);border-radius:4px 4px 0 0}
+.tcol .seg.dt{background:var(--dt);border-radius:4px 4px 0 0;margin-bottom:2px}
+.tcol .seg.dt + .seg.sn{border-radius:0}
+.tcol.cur::after{content:"";position:absolute;inset:-4px -2px -1px;border-radius:6px;background:var(--surface-2);z-index:-1}
+.tlabels{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;font-size:12px;color:var(--muted);text-align:center;margin-top:6px}
+/* Thẻ chọn */
+.tabs{display:flex;gap:4px;background:var(--surface-2);padding:4px;border-radius:12px;overflow-x:auto}
+.tabs button{border:0;background:transparent;min-height:34px;padding:6px 12px;border-radius:9px;color:var(--text-2);white-space:nowrap}
+.tabs button.on{background:var(--surface);color:var(--text);font-weight:600;box-shadow:var(--shadow)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tools input{flex:1;min-width:180px}
+/* Danh sách xếp hạng */
+.rows{display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:28px minmax(0,1fr) 120px;gap:4px 10px;align-items:center;padding:9px 4px;border-top:1px solid var(--line);cursor:pointer}
+.row:first-child{border-top:0}
+.row:hover{background:var(--surface-2)}
+.row .rk{color:var(--muted);font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+.row .nm{font-weight:500;overflow:hidden;text-overflow:ellipsis}
+.row .nm small{color:var(--muted);font-weight:400;margin-left:6px}
+.row .val{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.row .val small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.bar{grid-column:2 / 4;display:flex;gap:2px;height:8px}
+.bar i{display:block;height:100%;border-radius:4px}
+.bar i.sn{background:var(--sn)} .bar i.dt{background:var(--dt)}
+.kids{grid-column:1 / -1;margin:6px 0 2px 38px;display:none}
+.row.open .kids{display:block}
+.kid{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:2px 10px;padding:6px 0;border-top:1px dashed var(--line);font-size:14px}
+.kid .k-nm{color:var(--text-2)}
+.kid .k-v{text-align:right;font-variant-numeric:tabular-nums}
+.kid .bar{grid-column:1 / -1;height:5px}
+.more{margin-top:10px;text-align:center}
+.empty,.msg{color:var(--text-2);text-align:center;padding:28px 12px}
+.msg code{background:var(--surface-2);padding:2px 6px;border-radius:6px}
+.err{color:var(--bad)}
+/* Tooltip */
+#tip{position:fixed;pointer-events:none;z-index:50;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.15);opacity:0;transition:opacity .08s;max-width:280px}
+#tip .t{font-weight:600;margin-bottom:4px}
+#tip .r{display:flex;gap:8px;align-items:center;justify-content:space-between}
+#tip .r b{font-variant-numeric:tabular-nums}
+.loading{position:fixed;top:0;left:0;height:3px;background:var(--accent);width:0;transition:width .4s;z-index:60}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:12px 0 24px}
+footer a{color:inherit}
+@media (max-width:760px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .kpi .v{font-size:21px}
+  h1{font-size:20px}
+  .row{grid-template-columns:22px minmax(0,1fr) 96px}
+  .kids{margin-left:0}
+  .trend{height:150px;gap:3px}.tlabels{gap:3px;font-size:11px}
+  header.top{align-items:stretch}.filters{width:100%}.filters select{flex:1}
+}
+</style>
+</head>
+<body>
+<div class="loading" id="loading"></div>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="org">Sở Tài chính tỉnh Cao Bằng</div>
+      <h1>Tình hình giải ngân Chương trình MTQG</h1>
+      <div class="sub" id="subline">Số thực hiện theo báo cáo ngân sách · Đơn vị tính: triệu đồng</div>
+    </div>
+    <div class="filters">
+      <select id="selYear" aria-label="Năm"></select>
+      <select id="selPeriod" aria-label="Kỳ báo cáo"></select>
+      <button class="btn-ghost" id="btnTheme" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện">◐</button>
+    </div>
+  </header>
+
+  <div id="app">
+    <div class="msg">Đang tải số liệu…</div>
+  </div>
+
+  <footer>Nguồn: Bộ lọc &amp; Tổng hợp Chương trình MTQG (Sở Tài chính Cao Bằng) · Biên soạn: Lục Hồng Kỳ · <span id="stamp"></span></footer>
+</div>
+<div id="tip"></div>
+
+<script>
+/* ====== CẤU HÌNH ======
+ * Dán URL triển khai Web App (quyền truy cập "Bất kỳ ai") của dự án "Bộ lọc MTQG".
+ * Dạng: https://script.google.com/macros/s/XXXXXXXX/exec  */
+var API_URL = 'https://script.google.com/macros/s/AKfycbxt5tSG-wHDOuqW6tGF_rBDBpcsGVBR6teExwiGzCglAeiZo-PpUjRyrslygDHcukLj/exec';
+/* ====================== */
+
+var S = { data:null, tab:'ctda', q:'', limit:15, cache:{} };
+var $ = function(id){ return document.getElementById(id); };
+
+/* ---- định dạng ---- */
+function trieu(n){ return (Number(n)||0)/1e6; }
+function fmtTr(n, d){ var v = trieu(n); d = d==null ? (Math.abs(v) >= 100 ? 0 : 1) : d;
+  return v.toLocaleString('vi-VN',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fmtTy(n){ return ((Number(n)||0)/1e9).toLocaleString('vi-VN',{maximumFractionDigits:2}); }
+function pct(a,b){ return b ? (a/b*100).toLocaleString('vi-VN',{maximumFractionDigits:1})+'%' : '–'; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function noAccent(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase(); }
+function periodName(t){ t=Number(t); return t===13?'Cả năm':(t===0?'Gộp các tháng':'Tháng '+t); }
+
+/* ---- giao diện sáng/tối ---- */
+(function(){
+  try{ var t = localStorage.getItem('mtqg_theme'); if(t) document.documentElement.setAttribute('data-theme',t); }catch(e){}
+  $('btnTheme').onclick = function(){
+    var cur = document.documentElement.getAttribute('data-theme') ||
+      (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    var nx = cur==='dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nx);
+    try{ localStorage.setItem('mtqg_theme', nx); }catch(e){}
+  };
+})();
+
+/* ---- gọi API ---- */
+function loading(on){ var b=$('loading'); b.style.width = on ? '70%' : '100%'; if(!on) setTimeout(function(){ b.style.width='0'; },300); }
+function callApi(params){
+  var qs = Object.keys(params).map(function(k){ return k+'='+encodeURIComponent(params[k]); }).join('&');
+  var url = API_URL + (API_URL.indexOf('?')<0?'?':'&') + qs;
+  return fetch(url, {redirect:'follow'}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .catch(function(){ return jsonp(url); });
+}
+function jsonp(url){
+  return new Promise(function(res, rej){
+    var cb = '__mtqg' + Date.now(), s = document.createElement('script');
+    window[cb] = function(d){ res(d); delete window[cb]; s.remove(); };
+    s.onerror = function(){ rej(new Error('Không kết nối được máy chủ dữ liệu')); s.remove(); };
+    s.src = url + '&callback=' + cb; document.head.appendChild(s);
+  });
+}
+
+function init(){
+  if(!API_URL){
+    $('app').innerHTML = '<div class="card msg">Chưa cấu hình nguồn số liệu. Mở <code>index.html</code>, dán URL Web App của “Bộ lọc MTQG” vào biến <code>API_URL</code>.</div>';
+    return;
+  }
+  try{ var c = JSON.parse(localStorage.getItem('mtqg_last')||'null'); if(c && c.ok){ apply(c, true); } }catch(e){}
+  loading(true);
+  callApi({api:'init'}).then(function(d){
+    loading(false);
+    if(!d || !d.ok){ throw new Error((d && d.error) || 'Dữ liệu trả về không hợp lệ'); }
+    S.periods = d.periods; S.cache[d.nam+'_'+d.thang] = d;
+    try{ localStorage.setItem('mtqg_last', JSON.stringify(d)); }catch(e){}
+    apply(d);
+  }).catch(function(e){
+    loading(false);
+    if(!S.data) $('app').innerHTML = '<div class="card msg err">Không tải được số liệu: '+esc(e.message)+'</div>';
+  });
+}
+
+function fillSelects(nam, thang){
+  var per = S.periods || {}, ys = Object.keys(per).sort().reverse();
+  $('selYear').innerHTML = ys.map(function(y){ return '<option'+(String(y)===String(nam)?' selected':'')+'>'+y+'</option>'; }).join('');
+  var ths = (per[nam]||[]).slice().reverse();
+  var opts = ths.map(function(t){ return '<option value="'+t+'"'+(Number(t)===Number(thang)?' selected':'')+'>'+periodName(t)+'</option>'; });
+  if(ths.filter(function(t){return t>=1&&t<=12;}).length > 1) opts.push('<option value="0"'+(Number(thang)===0?' selected':'')+'>Gộp các tháng</option>');
+  $('selPeriod').innerHTML = opts.join('');
+}
+$('selYear').onchange = function(){ var y=this.value, ths=(S.periods[y]||[]); load(y, ths[ths.length-1]); };
+$('selPeriod').onchange = function(){ load($('selYear').value, this.value); };
+
+function load(nam, thang){
+  var key = nam+'_'+thang;
+  if(S.cache[key]){ apply(S.cache[key]); return; }
+  loading(true);
+  callApi({api:'report', nam:nam, thang:thang}).then(function(d){
+    loading(false);
+    if(!d || !d.ok) throw new Error((d && d.error) || 'Lỗi dữ liệu');
+    S.cache[key] = d; apply(d);
+  }).catch(function(e){ loading(false); alert('Không tải được số liệu: '+e.message); });
+}
+
+function apply(d, fromCache){
+  if(d.periods) S.periods = d.periods;
+  S.data = d; S.limit = 15;
+  fillSelects(d.nam, d.thang);
+  $('stamp').textContent = (fromCache ? 'Đang dùng số liệu lưu tạm, đang cập nhật… · ' : '') + 'Cập nhật lúc ' + new Date().toLocaleString('vi-VN');
+  render();
+}
+
+/* ---- dựng trang ---- */
+function render(){
+  var d = S.data, r = d.report || {};
+  if(d.empty || r.empty){ $('app').innerHTML = '<div class="card empty">Chưa có số liệu cho kỳ này.</div>'; return; }
+  var tong = (r.tongSN||0) + (r.tongDT||0);
+  var nXa = (r.diaban||[]).length, nCt = (r.ctda||[]).length;
+  var h = '';
+  h += '<section class="kpis">'
+    + kpi('Tổng số thực hiện', fmtTy(tong), 'tỷ đồng · '+periodName(d.thang)+' năm '+d.nam)
+    + kpi('<span class="dot dt"></span>Vốn đầu tư', fmtTy(r.tongDT), 'tỷ đồng · '+pct(r.tongDT,tong)+' tổng số')
+    + kpi('<span class="dot sn"></span>Vốn sự nghiệp', fmtTy(r.tongSN), 'tỷ đồng · '+pct(r.tongSN,tong)+' tổng số')
+    + kpi('Phạm vi', nCt+' CT · '+nXa+' địa bàn', 'chương trình / địa bàn có số liệu')
+    + '</section>';
+  h += trendCard(d);
+  h += '<section class="card"><div class="hd"><div class="tabs" role="tablist">'
+    + tabBtn('ctda','Chương trình') + tabBtn('diaban','Địa bàn') + tabBtn('donvi','Đơn vị thực hiện') + tabBtn('loai','Lĩnh vực chi')
+    + '</div><div class="legend"><span><i class="dot dt"></i>Đầu tư</span><span><i class="dot sn"></i>Sự nghiệp</span></div></div>'
+    + '<div class="tools"><input type="search" id="q" placeholder="Tìm theo tên (gõ không dấu được)" value="'+esc(S.q)+'">'
+    + '<button id="btnCsv">Tải bảng (CSV)</button></div>'
+    + '<div class="rows" id="rows"></div><div class="more" id="more"></div></section>';
+  $('app').innerHTML = h;
+  document.querySelectorAll('.tabs button').forEach(function(b){ b.onclick = function(){ S.tab=b.dataset.t; S.limit=15; render(); }; });
+  $('q').oninput = function(){ S.q = this.value; S.limit = 15; renderRows(); };
+  $('btnCsv').onclick = exportCsv;
+  bindTrend();
+  renderRows();
+}
+function kpi(lb, v, u){ return '<div class="kpi"><div class="lb">'+lb+'</div><div class="v">'+v+'</div><div class="u">'+u+'</div></div>'; }
+function tabBtn(t, lb){ return '<button role="tab" data-t="'+t+'" class="'+(S.tab===t?'on':'')+'">'+lb+'</button>'; }
+
+function trendCard(d){
+  var t = d.trend; if(!t) return '';
+  var tot = t.sn.map(function(v,i){ return v + t.dt[i]; });
+  if(!tot.some(function(v){return v>0;})) return '';
+  var mx = Math.max.apply(null, tot) || 1, cur = Number(d.thang);
+  var cols = tot.map(function(v,i){
+    var hs = t.sn[i]/mx*100, hd = t.dt[i]/mx*100;
+    return '<div class="tcol'+(cur===i+1?' cur':'')+'" data-m="'+i+'">'
+      + (t.dt[i]>0?'<div class="seg dt" style="height:'+hd+'%"></div>':'')
+      + (t.sn[i]>0?'<div class="seg sn" style="height:'+hs+'%"></div>':'') + '</div>';
+  }).join('');
+  var labels = tot.map(function(_,i){ return '<div>T'+(i+1)+'</div>'; }).join('');
+  return '<section class="card"><div class="hd"><h2>Số thực hiện các kỳ đã cập nhật – năm '+esc(d.nam)+'</h2>'
+    + '<div class="legend"><span><i class="dot dt"></i>Đầu tư</span><span><i class="dot sn"></i>Sự nghiệp</span></div></div>'
+    + '<div class="trend" id="trend">'+cols+'</div><div class="tlabels">'+labels+'</div></section>';
+}
+function bindTrend(){
+  var el = $('trend'); if(!el) return; var t = S.data.trend;
+  el.querySelectorAll('.tcol').forEach(function(c){
+    var i = Number(c.dataset.m);
+    var show = function(ev){ tip(ev, 'Tháng '+(i+1)+'/'+S.data.nam, [['dt','Đầu tư',t.dt[i]],['sn','Sự nghiệp',t.sn[i]],[null,'Tổng',t.dt[i]+t.sn[i]]]); };
+    c.onmousemove = show; c.onmouseleave = hideTip;
+    c.ontouchstart = function(ev){ show(ev.touches[0]); };
+    c.onclick = function(){ var ths = S.periods[S.data.nam]||[]; if(ths.indexOf(i+1)>=0) load(S.data.nam, i+1); };
+  });
+}
+
+function currentList(){
+  var list = (S.data.report||{})[S.tab] || [];
+  if(S.q){ var q = noAccent(S.q);
+    list = list.filter(function(x){ return noAccent(x.name+' '+(x.code||'')).indexOf(q)>=0 ||
+      (x.children||[]).some(function(c){ return noAccent(c.name).indexOf(q)>=0; }); }); }
+  if(S.tab==='diaban' && !S.q){ /* giữ thứ tự giảm dần theo tổng */ }
+  return list;
+}
+function renderRows(){
+  var list = currentList(), box = $('rows');
+  if(!list.length){ box.innerHTML = '<div class="empty">Không có dòng phù hợp.</div>'; $('more').innerHTML=''; return; }
+  var mx = list.reduce(function(m,x){ return Math.max(m,x.total); }, 0) || 1;
+  var tong = (S.data.report.tongSN||0)+(S.data.report.tongDT||0);
+  box.innerHTML = list.slice(0, S.limit).map(function(x, i){
+    var kids = (x.children||[]).slice(0,30).map(function(c){
+      return '<div class="kid"><div class="k-nm">'+esc(c.name)+'</div><div class="k-v">'+fmtTr(c.total)+'</div>'
+        + bar(c, x.total) + '</div>'; }).join('');
+    return '<div class="row" data-i="'+i+'"><div class="rk">'+(i+1)+'</div>'
+      + '<div class="nm" title="'+esc(x.name)+'">'+esc(x.name)+(x.code?'<small>'+esc(x.code)+'</small>':'')+'</div>'
+      + '<div class="val">'+fmtTr(x.total)+'<small>'+pct(x.total,tong)+'</small></div>'
+      + bar(x, mx) + (kids?'<div class="kids">'+kids+'</div>':'') + '</div>';
+  }).join('');
+  box.querySelectorAll('.row').forEach(function(rw){
+    var x = list[Number(rw.dataset.i)];
+    rw.onclick = function(){ rw.classList.toggle('open'); };
+    var b = rw.querySelector(':scope > .bar');
+    b.onmousemove = function(ev){ tip(ev, x.name, [['dt','Đầu tư',x.dt],['sn','Sự nghiệp',x.sn],[null,'Tổng',x.total]]); };
+    b.onmouseleave = hideTip;
+  });
+  $('more').innerHTML = list.length > S.limit
+    ? '<button id="btnMore">Xem thêm ('+(list.length-S.limit)+' dòng)</button>' : '';
+  if($('btnMore')) $('btnMore').onclick = function(){ S.limit += 30; renderRows(); };
+}
+function bar(x, mx){
+  var wd = x.dt/mx*100, ws = x.sn/mx*100;
+  return '<div class="bar">'+(x.dt>0?'<i class="dt" style="width:'+wd+'%"></i>':'')+(x.sn>0?'<i class="sn" style="width:'+ws+'%"></i>':'')+'</div>';
+}
+
+/* ---- tooltip ---- */
+function tip(ev, title, rows){
+  var el = $('tip');
+  el.innerHTML = '<div class="t">'+esc(title)+'</div>' + rows.map(function(r){
+    return '<div class="r"><span>'+(r[0]?'<i class="dot '+r[0]+'"></i> ':'')+r[1]+'</span><b>'+fmtTr(r[2])+' tr.đ</b></div>'; }).join('');
+  var x = Math.min(ev.clientX + 14, innerWidth - el.offsetWidth - 8), y = ev.clientY + 14;
+  if(y + el.offsetHeight > innerHeight - 8) y = ev.clientY - el.offsetHeight - 14;
+  el.style.left = x+'px'; el.style.top = y+'px'; el.style.opacity = 1;
+}
+function hideTip(){ $('tip').style.opacity = 0; }
+document.addEventListener('touchstart', function(e){ if(!e.target.closest('.tcol,.bar')) hideTip(); }, {passive:true});
+
+/* ---- xuất CSV ---- */
+function exportCsv(){
+  var list = currentList(), d = S.data;
+  var head = ['STT','Tên','Mã','Đầu tư (đồng)','Sự nghiệp (đồng)','Tổng (đồng)','Chi tiết'];
+  var lines = [head];
+  list.forEach(function(x,i){
+    lines.push([i+1, x.name, x.code||'', x.dt, x.sn, x.total, '']);
+    (x.children||[]).forEach(function(c){ lines.push(['', '', c.code||'', c.dt, c.sn, c.total, c.name]); });
+  });
+  var csv = '﻿' + lines.map(function(r){ return r.map(function(v){ v=String(v); return /[",\n;]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }).join(','); }).join('\n');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download = 'MTQG_'+S.tab+'_'+d.nam+'_'+periodName(d.thang).replace(/\s/g,'')+'.csv';
+  a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+}
+
+init();
+</script>
+</body>
+</html>

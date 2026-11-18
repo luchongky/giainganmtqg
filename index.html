@@ -76,6 +76,7 @@ button:hover,select:hover{border-color:var(--muted)}
 .row{display:grid;grid-template-columns:28px minmax(0,1fr) 120px;gap:4px 10px;align-items:center;padding:9px 4px;border-top:1px solid var(--line);cursor:pointer}
 .row:first-child{border-top:0}
 .row:hover{background:var(--surface-2)}
+.compare-wrap{overflow:auto;margin-top:12px}.compare-table{min-width:760px;font-size:12px}.compare-table th,.compare-table td{padding:9px 10px;border:1px solid var(--line)}.compare-table th{background:var(--surface-2);color:var(--text-2);font-weight:600;text-align:left}.compare-table td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.compare-table tr.total{background:var(--surface-2);font-weight:700}.compare-note{color:var(--muted);font-size:12px;margin:6px 0}.source-status{font-size:11px;color:var(--text-2)}
 .row .rk{color:var(--muted);font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
 .row .nm{font-weight:500;overflow:hidden;text-overflow:ellipsis}
 .row .nm small{color:var(--muted);font-weight:400;margin-left:6px}
@@ -142,9 +143,10 @@ footer a{color:inherit}
  * Dán URL triển khai Web App (quyền truy cập "Bất kỳ ai") của dự án "Bộ lọc MTQG".
  * Dạng: https://script.google.com/macros/s/XXXXXXXX/exec  */
 var API_URL = 'https://script.google.com/macros/s/AKfycbxt5tSG-wHDOuqW6tGF_rBDBpcsGVBR6teExwiGzCglAeiZo-PpUjRyrslygDHcukLj/exec';
+var UNIT_API_URL = 'https://script.google.com/macros/s/AKfycbzjBOjjPdTha9wX6A1laqtiGYwlaZK--dNbzHSRbjtZm3YlO_zObF2Wm7XuwIKpxnOl/exec';
 /* ====================== */
 
-var S = { data:null, tab:'ctda', q:'', limit:15, cache:{} };
+var S = { data:null, tab:'ctda', q:'', limit:15, cache:{}, unitData:null, unitError:'', unitLoading:false };
 var $ = function(id){ return document.getElementById(id); };
 
 /* ---- định dạng ---- */
@@ -177,6 +179,28 @@ function callApi(params){
   return fetch(url, {redirect:'follow'}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .catch(function(){ return jsonp(url); });
 }
+function loadUnitData(force){
+  if(S.unitLoading) return;
+  S.unitLoading = true;
+  S.unitError = '';
+  if(S.data) render();
+  var url = UNIT_API_URL + '?api=data' + (force ? '&nocache=' + Date.now() : '');
+  fetch(url, {redirect:'follow', credentials:'omit'})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(d){
+      if(!d || d.ok !== true || !Array.isArray(d.units)) throw new Error('Nguồn xã chưa trả về danh sách số liệu hợp lệ.');
+      S.unitData = d;
+      S.unitError = '';
+    })
+    .catch(function(e){
+      S.unitData = null;
+      S.unitError = (e && e.message) || 'Không kết nối được nguồn báo cáo xã.';
+    })
+    .finally(function(){
+      S.unitLoading = false;
+      if(S.data) render();
+    });
+}
 function jsonp(url){
   return new Promise(function(res, rej){
     var cb = '__mtqg' + Date.now(), s = document.createElement('script');
@@ -187,6 +211,7 @@ function jsonp(url){
 }
 
 function init(){
+  loadUnitData(false);
   if(!API_URL){
     $('app').innerHTML = '<div class="card msg">Chưa cấu hình nguồn số liệu. Mở <code>index.html</code>, dán URL Web App của “Bộ lọc MTQG” vào biến <code>API_URL</code>.</div>';
     return;
@@ -236,9 +261,73 @@ function apply(d, fromCache){
 }
 
 /* ---- dựng trang ---- */
+function areaKey(name){
+  return noAccent(name).replace(/^(xa|phuong|thi tran|thi xa|thanh pho)\s+/, '').replace(/\s+/g, ' ').trim();
+}
+function isCommuneUnit(u){
+  var kind = String((u && u.kind) || '').toLowerCase();
+  return ['commune','xa','phuong','ward'].indexOf(kind) >= 0 || /^(xã|phường)\s/i.test(String((u && u.name) || ''));
+}
+function sourceMtqgPair(u){
+  var p = u && u.p && u.p['II'];
+  if(Array.isArray(p) && p.length >= 2 && p[0] != null && p[1] != null) return [Number(p[0]) || 0, Number(p[1]) || 0];
+  var detail = u && u.mtqg || {}, keys = Object.keys(detail);
+  if(!keys.length) return null;
+  var total = [0,0], found = false;
+  keys.forEach(function(k){
+    var v = detail[k];
+    if(Array.isArray(v) && v.length >= 2 && v[0] != null && v[1] != null){ total[0] += Number(v[0]) || 0; total[1] += Number(v[1]) || 0; found = true; }
+  });
+  return found ? total : null;
+}
+function fmtSourceMillion(n){
+  return n == null || !Number.isFinite(Number(n)) ? '—' : Number(n).toLocaleString('vi-VN',{maximumFractionDigits:3});
+}
+function unitReportStatus(u){
+  var s = u && u.reportSource;
+  if(s === 'submitted') return 'Đã gửi';
+  if(s === 'snapshot') return 'Số chốt kỳ trước';
+  if(s === 'draft') return 'Số đang nhập · chưa gửi';
+  if(s === 'unavailable') return 'Chưa có số liệu';
+  if(u && u.submitted === true) return 'Đã gửi';
+  return 'Chưa xác nhận';
+}
+function unitCompareCard(d){
+  var rep = (d && d.report) || {}, tabmisRows = Array.isArray(rep.diaban) ? rep.diaban : [];
+  var source = S.unitData;
+  var sourceUnits = source && Array.isArray(source.units) ? source.units.filter(isCommuneUnit) : [];
+  var bySource = Object.create(null), byTabmis = Object.create(null), keys = Object.create(null);
+  sourceUnits.forEach(function(u){ var k=areaKey(u.name); if(k){ bySource[k]=u; keys[k]=u.name; } });
+  tabmisRows.forEach(function(u){ var k=areaKey(u.name); if(k){ byTabmis[k]=u; if(!keys[k]) keys[k]=u.name; } });
+  var rows = Object.keys(keys).map(function(k){
+    var u=bySource[k], t=byTabmis[k], pair=u?sourceMtqgPair(u):null;
+    return {name:keys[k], pair:pair, source:u, tabmis:t && Number.isFinite(Number(t.total)) ? Number(t.total) : null};
+  }).sort(function(a,b){ return a.name.localeCompare(b.name,'vi'); });
+  var sourceKnown=rows.filter(function(r){return !!r.pair;});
+  var tabmisKnown=rows.filter(function(r){return r.tabmis!=null;});
+  var sourceBudget=sourceKnown.reduce(function(s,r){return s+r.pair[0];},0);
+  var sourcePaid=sourceKnown.reduce(function(s,r){return s+r.pair[1];},0);
+  var tabmisPaid=tabmisKnown.reduce(function(s,r){return s+r.tabmis;},0);
+  var sourcePeriod=source && source.period && source.period.label ? source.period.label : 'kỳ hiện tại';
+  var tabmisPeriod=periodName(d && d.thang)+' năm '+(d && d.nam || '');
+  var h='<section class="card compare-card"><div class="hd"><h2>Đối chiếu giải ngân MTQG theo xã, phường</h2><button class="btn-ghost" id="refreshUnitBtn" type="button">Cập nhật nguồn xã</button></div>';
+  h+='<p class="compare-note">Báo cáo xã ('+esc(sourcePeriod)+'): '+sourceKnown.length+' đơn vị có số; TABMIS ('+esc(tabmisPeriod)+'): '+tabmisKnown.length+' đơn vị có số. Đơn vị tính: triệu đồng. Hai nguồn được trình bày riêng, không cộng gộp.</p>';
+  if(S.unitLoading && !source) h+='<div class="chart-empty">Đang tải số liệu báo cáo xã…</div>';
+  else if(!source && S.unitError) h+='<div class="chart-empty err">Không tải được nguồn báo cáo xã: '+esc(S.unitError)+'. Số TABMIS vẫn hiển thị theo kỳ đã chọn.</div>';
+  if(rows.length){
+    h+='<div class="compare-wrap"><table class="compare-table"><thead><tr><th>STT</th><th>Xã, phường</th><th>Dự toán theo báo cáo xã</th><th>Giải ngân đơn vị báo cáo</th><th>Giải ngân TABMIS</th><th>Tình trạng báo cáo xã</th></tr></thead><tbody>';
+    h+='<tr class="total"><td></td><td>Tổng theo số hiện có</td><td class="num">'+fmtSourceMillion(sourceKnown.length?sourceBudget:null)+'</td><td class="num">'+fmtSourceMillion(sourceKnown.length?sourcePaid:null)+'</td><td class="num">'+fmtTr(tabmisKnown.length?tabmisPaid:null)+'</td><td>'+sourceKnown.length+'/'+sourceUnits.length+' đơn vị có số</td></tr>';
+    rows.forEach(function(r,i){
+      h+='<tr><td>'+(i+1)+'</td><td>'+esc(r.name)+'</td><td class="num">'+fmtSourceMillion(r.pair?r.pair[0]:null)+'</td><td class="num">'+fmtSourceMillion(r.pair?r.pair[1]:null)+'</td><td class="num">'+fmtTr(r.tabmis)+'</td><td class="source-status">'+esc(r.source?unitReportStatus(r.source):'Chưa có báo cáo xã')+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+  } else if(!S.unitLoading && !S.unitError) h+='<div class="chart-empty">Chưa có số liệu theo xã, phường ở hai nguồn trong kỳ này.</div>';
+  h+='<p class="compare-note">Dự toán và giải ngân báo cáo xã lấy từ Mục II của hệ thống báo cáo giải ngân xã; TABMIS lấy từ dữ liệu đã nạp trong Bộ lọc MTQG. Số liệu báo cáo xã có thể đang nhập hoặc thuộc kỳ chốt khác, trạng thái được ghi ở cột cuối.</p></section>';
+  return h;
+}
 function render(){
   var d = S.data, r = d.report || {};
-  if(d.empty || r.empty){ $('app').innerHTML = '<div class="card empty">Chưa có số liệu cho kỳ này.</div>'; return; }
+  if(d.empty || r.empty){ $('app').innerHTML = '<div class="card empty">Chưa có số liệu TABMIS cho kỳ này.</div>' + unitCompareCard(d); bindUnitRefresh(); return; }
   var tong = (r.tongSN||0) + (r.tongDT||0);
   var nXa = (r.diaban||[]).length, nCt = (r.ctda||[]).length;
   var h = '';
@@ -249,6 +338,7 @@ function render(){
     + kpi('Phạm vi', nCt+' CT · '+nXa+' địa bàn', 'chương trình / địa bàn có số liệu')
     + '</section>';
   h += trendCard(d);
+  h += unitCompareCard(d);
   h += '<section class="card"><div class="hd"><div class="tabs" role="tablist">'
     + tabBtn('ctda','Chương trình') + tabBtn('diaban','Địa bàn') + tabBtn('donvi','Đơn vị thực hiện') + tabBtn('loai','Lĩnh vực chi')
     + '</div><div class="legend"><span><i class="dot dt"></i>Đầu tư</span><span><i class="dot sn"></i>Sự nghiệp</span></div></div>'
@@ -259,8 +349,10 @@ function render(){
   document.querySelectorAll('.tabs button').forEach(function(b){ b.onclick = function(){ S.tab=b.dataset.t; S.limit=15; render(); }; });
   $('q').oninput = function(){ S.q = this.value; S.limit = 15; renderRows(); };
   bindTrend();
+  bindUnitRefresh();
   renderRows();
 }
+function bindUnitRefresh(){ var b=$('refreshUnitBtn'); if(b) b.onclick=function(){ loadUnitData(true); }; }
 function kpi(lb, v, u){ return '<div class="kpi"><div class="lb">'+lb+'</div><div class="v">'+v+'</div><div class="u">'+u+'</div></div>'; }
 function tabBtn(t, lb){ return '<button role="tab" data-t="'+t+'" class="'+(S.tab===t?'on':'')+'">'+lb+'</button>'; }
 

@@ -298,7 +298,7 @@ function unitCompareCard(d){
   var sourceUnits = source && Array.isArray(source.units) ? source.units.filter(isCommuneUnit) : [];
   var bySource = Object.create(null), byTabmis = Object.create(null), keys = Object.create(null);
   sourceUnits.forEach(function(u){ var k=areaKey(u.name); if(k){ bySource[k]=u; keys[k]=u.name; } });
-  tabmisRows.forEach(function(u){ var k=areaKey(u.name); if(k && (bySource[k] || /^(xa|phuong)\\s/.test(noAccent(u.name)))){ byTabmis[k]=u; if(!keys[k]) keys[k]=u.name; } });
+  tabmisRows.forEach(function(u){ var k=areaKey(u.name), folded=noAccent(u.name); if(k && (bySource[k] || folded.indexOf('xa ')===0 || folded.indexOf('phuong ')===0)){ byTabmis[k]=u; if(!keys[k]) keys[k]=u.name; } });
   var rows = Object.keys(keys).map(function(k){
     var u=bySource[k], t=byTabmis[k], pair=u?sourceMtqgPair(u):null;
     return {name:keys[k], pair:pair, source:u, tabmis:t && Number.isFinite(Number(t.total)) ? Number(t.total) : null};

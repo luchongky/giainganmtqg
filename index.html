@@ -166,7 +166,7 @@ function noAccent(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'
 function periodName(t){ t=Number(t); return t===13?'Cả năm':(t===0?'Gộp các tháng':'Tháng '+t); }
 function programName(code){
   var key=String(code==null?'':code).trim();
-  var id=key.match(/^(?:CTMTQG\\s*)?0?([123])$/i);
+  var id=key.match(/^(?:CTMTQG\s*)?0?([123])$/i);
   if(!id) return key;
   var names={
     '1':'Chương trình 1: Phát triển kinh tế – xã hội vùng đồng bào dân tộc thiểu số và miền núi',

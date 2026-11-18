@@ -164,6 +164,17 @@ function pct(a,b){ return b ? (a/b*100).toLocaleString('vi-VN',{maximumFractionD
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function noAccent(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase(); }
 function periodName(t){ t=Number(t); return t===13?'Cả năm':(t===0?'Gộp các tháng':'Tháng '+t); }
+function programName(code){
+  var key=String(code==null?'':code).trim();
+  var id=key.match(/^(?:CTMTQG\\s*)?0?([123])$/i);
+  if(!id) return key;
+  var names={
+    '1':'Chương trình 1: Phát triển kinh tế – xã hội vùng đồng bào dân tộc thiểu số và miền núi',
+    '2':'Chương trình 2: Giảm nghèo bền vững',
+    '3':'Chương trình 3: Xây dựng nông thôn mới'
+  };
+  return names[id[1]] || key;
+}
 
 /* ---- giao diện sáng/tối ---- */
 (function(){
@@ -362,7 +373,7 @@ function unitProgramCard(){
     });
     var p=sourceMtqgPair(u); if(p){count++; totalBudget+=p[0];totalPaid+=p[1];}
   });
-  var programs=Object.keys(by).map(function(k){return by[k];}).sort(function(a,b){return b.paid-a.paid;});
+  var programs=Object.keys(by).map(function(k){by[k].name=programName(k);return by[k];}).sort(function(a,b){return b.paid-a.paid;});
   var sum=programs.reduce(function(a,x){return a+x.paid;},0), stops=['#1c5cab','#eb6834','#20856b','#a45bb5','#d2a300','#e05a72','#64748b'];
   var gradient='', acc=0;
   programs.forEach(function(p,i){var end=sum?acc+p.paid/sum*100:acc;gradient+=stops[i%stops.length]+' '+acc+'% '+end+'%, ';acc=end;});

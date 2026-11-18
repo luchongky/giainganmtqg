@@ -112,6 +112,7 @@ footer a{color:inherit}
   .trend{height:150px;gap:3px}.tlabels{gap:3px;font-size:11px}
   header.top{align-items:stretch}.filters{width:100%}.filters select{flex:1}
 }
+.page-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 14px}.page-tabs button{border:1px solid var(--line);background:var(--surface);color:var(--text-2);border-radius:9px;padding:10px 15px;font:600 13px inherit;cursor:pointer}.page-tabs button.active{background:var(--accent);border-color:var(--accent);color:#fff}.program-chart{display:flex;align-items:center;gap:28px;padding:22px;flex-wrap:wrap}.donut{width:220px;height:220px;border-radius:50%;display:grid;place-items:center;flex:none}.donut>div{width:130px;height:130px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center}.donut b{font-size:20px}.donut span{font-size:11px;color:var(--muted)}.pie-legend{display:grid;gap:10px;min-width:280px;flex:1}.pie-legend div{display:grid;grid-template-columns:12px 1fr auto;gap:9px;align-items:center;font-size:13px}.pie-legend i{width:10px;height:10px;border-radius:50%}.pie-legend b{font-variant-numeric:tabular-nums}.chart-empty{padding:22px;color:var(--muted)}@media(max-width:600px){.program-chart{justify-content:center;padding:12px}.donut{width:180px;height:180px}.donut>div{width:108px;height:108px}.page-tabs button{flex:1}}
 </style>
 </head>
 <body>
@@ -130,6 +131,11 @@ footer a{color:inherit}
     </div>
   </header>
 
+  <nav class="page-tabs" id="pageTabs" role="tablist" aria-label="Các nguồn số liệu">
+    <button type="button" data-page="unit" class="active">Giải ngân xã theo chương trình</button>
+    <button type="button" data-page="tabmis">Giải ngân TABMIS theo dự án</button>
+    <button type="button" data-page="compare">So sánh hai nguồn</button>
+  </nav>
   <div id="app">
     <div class="msg">Đang tải số liệu…</div>
   </div>
@@ -146,7 +152,7 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbxt5tSG-wHDOuqW6tGF_rBDBp
 var UNIT_API_URL = 'https://script.google.com/macros/s/AKfycbzjBOjjPdTha9wX6A1laqtiGYwlaZK--dNbzHSRbjtZm3YlO_zObF2Wm7XuwIKpxnOl/exec';
 /* ====================== */
 
-var S = { data:null, tab:'ctda', q:'', limit:15, cache:{}, unitData:null, unitError:'', unitLoading:false };
+var S = { page:'unit', data:null, tab:'ctda', q:'', limit:15, cache:{}, unitData:null, unitError:'', unitLoading:false };
 var $ = function(id){ return document.getElementById(id); };
 
 /* ---- định dạng ---- */
@@ -325,9 +331,52 @@ function unitCompareCard(d){
   h+='<p class="compare-note">Dự toán và giải ngân báo cáo xã lấy từ Mục II của hệ thống báo cáo giải ngân xã; TABMIS lấy từ dữ liệu đã nạp trong Bộ lọc MTQG. Số liệu báo cáo xã có thể đang nhập hoặc thuộc kỳ chốt khác, trạng thái được ghi ở cột cuối.</p></section>';
   return h;
 }
+
 function render(){
+  document.querySelectorAll('#pageTabs button').forEach(function(b){
+    b.classList.toggle('active', b.dataset.page===S.page);
+    b.setAttribute('aria-selected', b.dataset.page===S.page ? 'true' : 'false');
+    b.onclick=function(){ S.page=b.dataset.page; S.q=''; render(); };
+  });
+  if(S.page==='unit'){
+    $('app').innerHTML = unitProgramCard();
+    bindUnitRefresh();
+  } else if(S.page==='compare'){
+    $('app').innerHTML = unitCompareCard(S.data);
+    bindUnitRefresh();
+  } else {
+    renderData();
+  }
+}
+function unitProgramCard(){
+  var src=S.unitData, units=src&&Array.isArray(src.units)?src.units.filter(isCommuneUnit):[];
+  var by=Object.create(null), count=0, totalBudget=0, totalPaid=0;
+  units.forEach(function(u){
+    var m=u.mtqg||{};
+    Object.keys(m).forEach(function(k){
+      var v=m[k];
+      if(Array.isArray(v)&&v.length>=2&&v[0]!=null&&v[1]!=null){
+        if(!by[k]) by[k]={name:k,budget:0,paid:0,units:0};
+        by[k].budget+=Number(v[0])||0; by[k].paid+=Number(v[1])||0; by[k].units++;
+      }
+    });
+    var p=sourceMtqgPair(u); if(p){count++; totalBudget+=p[0];totalPaid+=p[1];}
+  });
+  var programs=Object.keys(by).map(function(k){return by[k];}).sort(function(a,b){return b.paid-a.paid;});
+  var sum=programs.reduce(function(a,x){return a+x.paid;},0), stops=['#1c5cab','#eb6834','#20856b','#a45bb5','#d2a300','#e05a72','#64748b'];
+  var gradient='', acc=0;
+  programs.forEach(function(p,i){var end=sum?acc+p.paid/sum*100:acc;gradient+=stops[i%stops.length]+' '+acc+'% '+end+'%, ';acc=end;});
+  var pie=programs.length&&sum?'<div class="program-chart"><div class="donut" style="background:conic-gradient('+gradient.slice(0,-2)+')"><div><b>'+fmtSourceMillion(sum)+'</b><span>triệu đồng</span></div></div><div class="pie-legend">'+programs.map(function(p,i){return '<div><i style="background:'+stops[i%stops.length]+'"></i><span>'+esc(p.name)+'</span><b>'+fmtSourceMillion(p.paid)+'</b></div>';}).join('')+'</div></div>':'<div class="chart-empty">'+(S.unitLoading?'Đang tải số liệu báo cáo xã…':(S.unitError?'Không tải được nguồn báo cáo xã: '+esc(S.unitError):'Chưa có số liệu theo chương trình.'))+'</div>';
+  var h='<section class="kpis">'+kpi('Dự toán báo cáo xã',fmtSourceMillion(totalBudget),'triệu đồng · Mục II')+kpi('Giải ngân xã báo cáo',fmtSourceMillion(totalPaid),'triệu đồng · '+count+' đơn vị có số')+kpi('Số chương trình',programs.length,'có dữ liệu giải ngân')+kpi('Kỳ báo cáo xã',esc(src&&src.period&&src.period.label||'—'), 'trạng thái được ghi tại bảng')+'</section>';
+  h+='<section class="card"><div class="hd"><h2>Giải ngân xã theo chương trình</h2><button class="btn-ghost" id="refreshUnitBtn" type="button">Cập nhật nguồn xã</button></div><p class="compare-note">Số liệu tổng hợp từ báo cáo xã, đến cấp chương trình; đơn vị tính: triệu đồng. Dự toán và giải ngân cùng lấy từ Mục II của hệ thống báo cáo giải ngân xã.</p>'+pie+'</section>';
+  h+='<section class="card"><div class="hd"><h2>Chi tiết theo chương trình</h2></div><div class="compare-wrap"><table class="compare-table"><thead><tr><th>Chương trình</th><th>Đơn vị có số</th><th>Dự toán</th><th>Giải ngân</th><th>Tỷ lệ</th></tr></thead><tbody>';
+  if(programs.length){h+=programs.map(function(p){return '<tr><td>'+esc(p.name)+'</td><td>'+p.units+'</td><td class="num">'+fmtSourceMillion(p.budget)+'</td><td class="num">'+fmtSourceMillion(p.paid)+'</td><td class="num">'+pct(p.paid,p.budget)+'</td></tr>';}).join('');}
+  else h+='<tr><td colspan="5" class="chart-empty">Chưa có dữ liệu chương trình.</td></tr>';
+  h+='</tbody></table></div><p class="compare-note">Số tổng dự toán/giải ngân đầu trang lấy theo số xã có dữ liệu; bảng cộng theo các chương trình có số chi tiết từ API.</p></section>'; return h;
+}
+function renderData(){
   var d = S.data, r = d.report || {};
-  if(d.empty || r.empty){ $('app').innerHTML = '<div class="card empty">Chưa có số liệu TABMIS cho kỳ này.</div>' + unitCompareCard(d); bindUnitRefresh(); return; }
+  if(d.empty || r.empty){ $('app').innerHTML = '<div class="card empty">Chưa có số liệu TABMIS cho kỳ này.</div>'; return; }
   var tong = (r.tongSN||0) + (r.tongDT||0);
   var nXa = (r.diaban||[]).length, nCt = (r.ctda||[]).length;
   var h = '';
@@ -338,7 +387,6 @@ function render(){
     + kpi('Phạm vi', nCt+' CT · '+nXa+' địa bàn', 'chương trình / địa bàn có số liệu')
     + '</section>';
   h += trendCard(d);
-  h += unitCompareCard(d);
   h += '<section class="card"><div class="hd"><div class="tabs" role="tablist">'
     + tabBtn('ctda','Chương trình') + tabBtn('diaban','Địa bàn') + tabBtn('donvi','Đơn vị thực hiện') + tabBtn('loai','Lĩnh vực chi')
     + '</div><div class="legend"><span><i class="dot dt"></i>Đầu tư</span><span><i class="dot sn"></i>Sự nghiệp</span></div></div>'
